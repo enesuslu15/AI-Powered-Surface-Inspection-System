@@ -1,0 +1,82 @@
+// TIA Portal SCL Source File
+// Project: Polteks Surface Inspection (Auto-Run Revize)
+// Author: AI Assistant
+
+// ------------------------------------------------------------
+// DATA BLOCK: DB_AI_Communication
+// Holds the data written by Python Snap7 Client directly
+// ------------------------------------------------------------
+DATA_BLOCK "DB_AI_Communication"
+{ S7_Optimized_Access := 'FALSE' } 
+VERSION : 0.1
+   VAR
+      // Python buraya direkt yazacak
+      // Offset 0.0: AI Sonucu (0=Yok, 1=OK, 2=NOK)
+      AI_Result_Code : Int;
+      // Offset 2.0: Defect Type
+      Defect_Type : Int;
+   END_VAR
+   BEGIN
+      AI_Result_Code := 0;
+      Defect_Type := 0;
+END_DATA_BLOCK
+
+// ------------------------------------------------------------
+// FUNCTION BLOCK: FB_Machine_Control
+// Controls the main motor based on AI feedback
+// ------------------------------------------------------------
+FUNCTION_BLOCK "FB_Machine_Control"
+{ S7_Optimized_Access := 'FALSE' }
+VERSION : 0.2
+   VAR_INPUT 
+      System_Enable_Switch : Bool; // Kalıcı Anahtar (1 olduğu sürece çalışmaya çalışır)
+      Reset_Button : Bool;         // Hatayı silmek için buton
+   END_VAR
+
+   VAR_OUTPUT 
+      Motor_Cikis : Bool;  // Kontaktör
+      Red_Light   : Bool;  // Hata Lambası
+      Green_Light : Bool;  // Normal Çalışma Lambası
+   END_VAR
+
+   VAR 
+      Fault_Active   : Bool; // Hata aktif mi hafızası
+   END_VAR
+
+   BEGIN
+    
+    // 1. LOGIC: HATA YAKALAMA (AI Stop)
+    // Eğer AI 'HATA' (Code = 2) gönderirse Hata Hafızasını (Fault_Active) KİLİTLE.
+    IF "DB_AI_Communication".AI_Result_Code = 2 THEN
+        #Fault_Active := TRUE;
+    END_IF;
+
+    // 2. LOGIC: RESET (Arıza Silme)
+    // Reset butonuna basılırsa kilidi aç
+    IF #Reset_Button THEN
+        #Fault_Active := FALSE;
+        // AI Verilerini de temizle ki hemen tekrar hata düşmesin
+        "DB_AI_Communication".AI_Result_Code := 0;
+        "DB_AI_Communication".Defect_Type := 0;
+    END_IF;
+
+    // 3. LOGIC: MOTOR KONTROL (Çalışma Mantığı)
+    // "Motor olduğu gibi dönecek, hata tespit edildiğinde duracak"
+    // Yani: Anahtar AÇIKSA ve HATA YOKSA -> DÖN.
+    IF #System_Enable_Switch AND NOT #Fault_Active THEN
+        #Motor_Cikis := TRUE;
+        #Green_Light := TRUE;
+        #Red_Light := FALSE;
+    ELSE
+        // Anahtar kapalıysa VEYA Hata varsa -> DUR.
+        #Motor_Cikis := FALSE;
+        #Green_Light := FALSE;
+        // Eğer motor durduysa ama sebebi Hataysa Kırmızı Yak
+        IF #Fault_Active THEN
+            #Red_Light := TRUE;
+        ELSE
+            #Red_Light := FALSE;
+        END_IF;
+    END_IF;
+
+END_FUNCTION_BLOCK
