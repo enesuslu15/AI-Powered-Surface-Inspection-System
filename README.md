@@ -83,7 +83,6 @@ As a proof-of-concept for AI integration, the prototype uses **color-based defec
 | **Near-Zero Defect Escape** | ~100% quality assurance on outbound products |
 | **Efficiency** | Early defect detection prevents raw material and time waste |
 | **Data-Driven** | Every defect is logged with timestamp and image for traceability |
-| **Innovation** | Practical application of Polteks's "Technology-Driven Production" vision |
 
 ---
 
