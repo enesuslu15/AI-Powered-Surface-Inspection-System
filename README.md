@@ -4,7 +4,7 @@
 
 ## 1. Executive Summary
 
-To digitize and automate the quality control stage in Polteks's high-quality roller and calender machine production, this proposal introduces an **"Image Processing-Based Surface Inspection System."**
+This proposal introduces an **"Image Processing-Based Surface Inspection System."**
 
 The system detects defects on manufactured rollers using AI, communicates those results **directly to the Siemens PLC infrastructure**, and manages production in real time — without manual operator intervention.
 
@@ -122,4 +122,3 @@ As a proof-of-concept for AI integration, the prototype uses **color-based defec
 
 ---
 
-*This project was developed to elevate Polteks's quality standards to the next level through industrial AI integration.*
