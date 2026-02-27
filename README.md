@@ -1,4 +1,4 @@
-# 🔍 AI-Powered Surface Inspection System — Project Proposal
+# 🔍 AI-Powered Surface Inspection System 
 
 ---
 
