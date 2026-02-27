@@ -2,6 +2,13 @@
 
 ---
 
+
+
+![Demo](AI-Powered-Surface-Inspection-System.png)
+
+
+
+
 ## 1. Executive Summary
 
 This proposal introduces an **"Image Processing-Based Surface Inspection System."**
