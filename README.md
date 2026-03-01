@@ -60,7 +60,7 @@ The mAP scores and performance graphs obtained as a result of the training are l
 - **mAP50-95:** **47.4%**
 
 ### Performance Graph
-![Screenshot](results.png)
+![Surface Inspection Results](results.png)
 
 *Detailed training loss graphs and validation batch samples can be found inside the `runs/detect/` directory of your project space.*
 
