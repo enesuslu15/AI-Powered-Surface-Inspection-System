@@ -15,7 +15,7 @@ This project is an Artificial Intelligence (AI) based control system that detect
 ---
 
 
-![Demo](AI-Powered-Surface-Inspection-System.png)
+
 
 
 ## 🚀 Installation & Usage
