@@ -1,0 +1,110 @@
+// ==============================================================================
+// TIA Portal SCL Source File
+// Proje    : Polteks AI - Kumas Dikisi Kalite Kontrolu
+// Versiyon : 1.3 (%QW96 Analog Cikis ile Motor Surucu ve Ariza Kontrolu)
+// PLC      : Siemens S7-1200 / S7-1500
+// ==============================================================================
+// MANTIK:
+//   - Motor surucuye hem dijital (%Q0.0 Motor_Cikis) hem de analog hiz kontrol
+//     referansi (%QW96 -> Motor_Speed_QW96) gonderilerek calistirilir.
+//   - System_Enable_Switch ON oldugunda ve AI dikis hatasi YOKSA
+//     motor surucusu %QW96 uzerinden tam calisma referansini (27648 / 10V) alir.
+//   - AI kameradan NOK (2) hatasi algilandiginda sistem kilitlenir (Fault_Active=TRUE).
+//   - HATA ANINDA: %Q0.0 kesilir VE %QW96 (Analog Cikis) 0 Volt'a ani gerileme yapar!
+// ==============================================================================
+
+// -----------------------------------------------------------------------------
+// DATA BLOCK: DB_Stitching_AI_Communication (TIA Portal DB Numarasi: 1)
+// NOT: "Optimized block access" KALDIRILMIS (FALSE) olarak kalmalidir.
+// -----------------------------------------------------------------------------
+DATA_BLOCK "DB_Stitching_AI_Communication"
+{ S7_Optimized_Access := 'FALSE' }
+VERSION : 1.3
+   VAR
+      AI_Result_Code : Int;  // Offset 0: AI Sonucu (0=Bekle, 1=OK, 2=NOK Hata)
+      Defect_Type    : Int;  // Offset 2: Hata Tipi (1..5 Arasi Tanım)
+      Restart_Cmd    : Int;  // Offset 4: Python'dan Restart Sinyali (1=Restart)
+   END_VAR
+   BEGIN
+      AI_Result_Code := 0;
+      Defect_Type    := 0;
+      Restart_Cmd    := 0;
+END_DATA_BLOCK
+
+// -----------------------------------------------------------------------------
+// FUNCTION BLOCK: FB_Stitching_Machine_Control (FB1)
+// -----------------------------------------------------------------------------
+FUNCTION_BLOCK "FB_Stitching_Machine_Control"
+{ S7_Optimized_Access := 'FALSE' }
+VERSION : 1.3
+
+   VAR_INPUT
+      // Dijital Sistem Calistirma Anahtari veya Start Tetiklemesi (%I0.1 vb.)
+      System_Enable_Switch : Bool;  
+      
+      // Ariza sonrasi sifirlama (Restart) butonu (%I0.0)
+      Restart_Button       : Bool;  
+   END_VAR
+
+   VAR_OUTPUT
+      Motor_Cikis          : Bool;  // Motor Kontaktoru / Surucu Enable (%Q0.0)
+      Red_Light            : Bool;  // Kirmizi Ariza Lambasi (%Q0.1)
+      Green_Light          : Bool;  // Yesil Normal Calisiyor Lambasi (%Q0.2)
+      
+      // Motor Surucuye (Inverter) giden Analog Cikis Pini (%QW96)
+      // Siemens'te 0 Volt = 0, 10 Volt (Tam Hiz) = 27648 ham INT degerine denktir.
+      Motor_Speed_QW96     : Int;   
+   END_VAR
+
+   VAR
+      Fault_Active         : Bool;  // Ariza Kilit Hafizasi (Latching Flag)
+      Restart_Btn_Prev     : Bool;  // Buton Yukselen Kenar Hafizasi
+      Target_Run_Value     : Int := 27648; // Normal calismada %QW96'ya basilacak referans degeri
+   END_VAR
+
+   BEGIN
+
+   // =========================================================================
+   // 1. HATA YAKALAMA (AI'den NOK = 2 gelirse sistemi kilitle)
+   // =========================================================================
+   IF "DB_Stitching_AI_Communication".AI_Result_Code = 2 THEN
+       #Fault_Active := TRUE;
+   END_IF;
+
+   // =========================================================================
+   // 2. RESTART MANTIGI: Buton (%I0.0) Yukselen Kenar VEYA Python Restart_Cmd=1
+   // =========================================================================
+   IF (#Restart_Button AND NOT #Restart_Btn_Prev) OR
+      ("DB_Stitching_AI_Communication".Restart_Cmd = 1) THEN
+
+       #Fault_Active := FALSE;
+
+       "DB_Stitching_AI_Communication".AI_Result_Code := 0;
+       "DB_Stitching_AI_Communication".Defect_Type    := 0;
+       "DB_Stitching_AI_Communication".Restart_Cmd    := 0;
+
+   END_IF;
+   #Restart_Btn_Prev := #Restart_Button;
+
+   // =========================================================================
+   // 3. MOTOR VE ANALOG SURUCU YONETIMI (%QW96 KONTROLU)
+   // =========================================================================
+   IF #System_Enable_Switch AND NOT #Fault_Active THEN
+       #Motor_Cikis      := TRUE;              // Dijital Surucu Enable (%Q0.0) AKTIF
+       #Green_Light      := TRUE;              // Yesil Lamba (%Q0.2) YAK
+       #Red_Light        := FALSE;
+       #Motor_Speed_QW96 := #Target_Run_Value; // %QW96 pinine Tam Voltaji (27648) GONDER!
+   ELSE
+       #Motor_Cikis      := FALSE;             // Motor Kontaktorunu Kes!
+       #Green_Light      := FALSE;
+       #Motor_Speed_QW96 := 0;                 // GUVENLIK: %QW96 Analog Surucu Voltajini 0'a cek!
+
+       IF #Fault_Active THEN
+           #Red_Light := TRUE;
+       ELSE
+           #Red_Light := FALSE;
+       END_IF;
+   END_IF;
+
+END_FUNCTION_BLOCK
+

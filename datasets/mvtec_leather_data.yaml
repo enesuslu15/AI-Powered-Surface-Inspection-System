@@ -1,0 +1,9 @@
+path: ./datasets/mvtec_leather_yolo
+train: images/train
+val: images/val
+test:
+
+# Sınıflar
+names:
+  0: defect
+

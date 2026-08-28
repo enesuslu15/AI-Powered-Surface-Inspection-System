@@ -1,0 +1,13 @@
+path: ./datasets/stitchingnet_yolo
+train: images/train
+val: images/val
+test: images/test
+
+# Kumaş Dikişi Hata Sınıfları
+names:
+  0: skipped_stitch
+  1: broken_stitch
+  2: crooked_seam
+  3: thread_sagging
+  4: needle_damage
+
